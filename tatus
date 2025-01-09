@@ -1,0 +1,17 @@
+[33mcommit 09083f0ea4972b4fb418f9ab7fd613ba5230acf1[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: dan.axel.arancibia@gmail.com <133992474+DanielArancibiaP@users.noreply.github.com>
+Date:   Thu Jan 9 17:16:03 2025 -0300
+
+    se soluciono error en modificar perfil
+
+[33mcommit 1682f7b5170891e96b103304ef6c4f352d1bcb97[m[33m ([m[1;31morigin/master[m[33m, [m[1;31mazure/master[m[33m)[m
+Author: dan.axel.arancibia@gmail.com <133992474+DanielArancibiaP@users.noreply.github.com>
+Date:   Tue Nov 26 17:51:13 2024 -0300
+
+    Descripción de los cambios realizados
+
+[33mcommit 25d4ef74b93430fddfa0792e006f46586e836062[m
+Author: dan.axel.arancibia@gmail.com <133992474+DanielArancibiaP@users.noreply.github.com>
+Date:   Tue Nov 26 17:20:21 2024 -0300
+
+    Primera versión de mi API Flask
