@@ -8,14 +8,14 @@ from collections import OrderedDict
 import datetime
 import hashlib
 from flask_jwt_extended import (
-    JWTManager, create_access_token, jwt_required, get_jwt_identity
+    JWTManager, create_access_token, jwt_required, get_jwt_identity,decode_token
 )
 
 
 app = Flask(__name__)
 CORS(app)  # Aplica CORS a toda la aplicación
 
-app.config['MYSQL_HOST'] = '167.71.118.217'
+app.config['MYSQL_HOST'] = '167.71.118.217' 
 app.config['MYSQL_USER'] = 'admin_flutt'
 app.config['MYSQL_PASSWORD'] = 'lOtTetiz8P'
 app.config['MYSQL_DB'] = 'admin_flutt'
@@ -57,22 +57,166 @@ def get_deptos():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/usr', methods=['POST'])
-@jwt_required()
 def index():
+    try:
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return jsonify({'status': 'error', 'message': 'Email y password son requeridos.'}), 400
+
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM users WHERE email = %s AND password = %s', (email, password))
+        usuario = cur.fetchone()
+
+        if not usuario:
+            return jsonify({'status': 'not_found', 'message': 'Email o contraseña incorrectos.'}), 404
+
+        access_token = create_access_token(identity=email)
+
+        cur.execute('UPDATE users SET token = %s WHERE email = %s', (access_token, email))
+        mysql.connection.commit()
+
+        usuario_json = {
+            'id_users': usuario[0],
+            'nombreUser': usuario[1],
+            'apellido': usuario[2],
+            'email': usuario[3],
+            'depto': usuario[6],
+            'telefono': usuario[7],
+            'tipo_usuario': usuario[8]
+
+        }
+
+        return jsonify({'status': 'success', 'access_token': access_token, 'user_data': usuario_json}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error del servidor: {str(e)}'}), 500
+
+@app.route('/modificarPerfil', methods=['POST'])
+@jwt_required()
+def modPerfil():
+    try:
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
+        telefono = data.get('telefono')
+        nombre = data.get('nombre')
+
+        if not email:
+            return jsonify({'status': 'error', 'message': 'El email es obligatorio'}), 400
+
+        # Construir dinámicamente la consulta
+        campos_a_actualizar = []
+        valores = []
+
+        if nombre:
+            campos_a_actualizar.append("nombreUser=%s")
+            valores.append(nombre)
+        if telefono:
+            campos_a_actualizar.append("telefono=%s")
+            valores.append(telefono)
+        if password:
+            campos_a_actualizar.append("password=%s")
+            valores.append(password)
+
+        if not campos_a_actualizar:
+            return jsonify({'status': 'error', 'message': 'No se proporcionaron campos para actualizar'}), 400
+        print(campos_a_actualizar)
+        # Agregar el email a los valores y construir la consulta
+        valores.append(email)
+        consulta = f"UPDATE users SET {', '.join(campos_a_actualizar)} WHERE email=%s"
+
+        # Ejecutar la consulta
+        cur = mysql.connection.cursor()
+        cur.execute(consulta, valores)
+        mysql.connection.commit()
+
+        return jsonify({'status': 'success', 'message': 'Usuario modificado con éxito'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error del servidor: {str(e)}'}), 500
+
+
+@app.route('/validarToken', methods=['POST'])
+def validar_token():
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
-    
+    token = data.get("token")
+
+    if not token:
+        return jsonify({"valid": False, "message": "Token no proporcionado"}), 400
+
+    cur = mysql.connection.cursor()
+    cur.execute('SELECT * FROM users WHERE token = %s', (token,))
+    usuario = cur.fetchone()
+    usuario_json = {
+            'id_users': usuario[0],
+            'nombreUser': usuario[1],
+            'apellido': usuario[2],
+            'email': usuario[3],
+            'depto': usuario[6],
+            'telefono': usuario[7],
+            'tipo_usuario': usuario[8]
+
+    }
+
+    try:
+        # Decodifica el token usando `decode_token`
+        decoded_token = decode_token(token)
+        return jsonify({
+            "valid": True,
+            "message": "El token es válido.",
+            "decoded_token": decoded_token,
+            "user_data": usuario_json  # Opcional: muestra todo el token decodificado
+        }), 200
+        
+    except Exception as e:
+        # Maneja errores de decodificación
+        return jsonify({
+            "valid": False,
+            "message": str(e)
+        }), 401
+
+@app.route('/validarToken2', methods=['POST'])
+def validar_token2():
+    data = request.json
+    token = data.get("token")
+    email = data.get("email")
+    password = data.get("password")
+
+    if not token:
+        return jsonify({"valid": False, "message": "Token no proporcionado"}), 400
+    if not email or not password:
+            return jsonify({'status': 'error', 'message': 'Email y password son requeridos.'}), 400
+
     cur = mysql.connection.cursor()
     cur.execute('SELECT * FROM users WHERE email = %s AND password = %s', (email, password))
-    
-    data = cur.fetchall()
-    cur.close()
-    if not data:
-        return "no se encontro el dato pedido"
-    else:
-       access_token = create_access_token(identity=email)
-    return jsonify(access_token=access_token), 200
+    usuario = cur.fetchone()
+    usuario_json = {
+             'id_users': usuario[0],
+            'nombreUser': usuario[1],
+            'apellido': usuario[2],
+            'email': usuario[3],
+            'depto': usuario[6],
+            'telefono': usuario[7],
+            'tipo_usuario': usuario[8]
+
+    }
+
+    try:
+        # Decodifica el token usando `decode_token`
+        decoded_token = decode_token(token)
+        return jsonify({
+            "valid": True,
+            "message": "El token es válido.",
+            "decoded_token": decoded_token,
+            "user_data": usuario_json  # Opcional: muestra todo el token decodificado
+        }), 200
+    except Exception as e:
+        # Maneja errores de decodificación
+        return jsonify({
+            "valid": False,
+            "message": str(e)
+        }), 401
 
 @app.route('/eliminarInvitado', methods=['POST'])
 @jwt_required()
@@ -105,27 +249,36 @@ def del_inv():
 @app.route('/deshabilitarQr', methods=['POST'])
 @jwt_required()
 def qr_deshabilitado():
-    data = request.json
-    id_inv = data.get('id_inv')
+    try:
+        # Obtener datos del cuerpo JSON
+        data = request.json
+        id_inv = data.get('id_inv')
 
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT habilitado FROM invitados WHERE id_inv = %s', (id_inv))
-    invitado = cur.fetchone()
-    
-    if invitado is None:
-        cur.close()
-        return jsonify({'status': 'not_found', 'message': 'No se encontró el invitado.'}), 404
+        # Validar datos
+        if not id_inv:
+            return jsonify({'status': 'invalid_request', 'message': 'El ID del invitado es requerido.'}), 400
 
-    habilitado = invitado[0] 
-    if habilitado == 0:
-        cur.close()
-        return jsonify({'status': 'already_disabled', 'message': 'Este QR ya está deshabilitado.'}), 200
+        # Consultar si el invitado existe y si está habilitado
+        with mysql.connection.cursor() as cur:
+            cur.execute('SELECT habilitado FROM invitados WHERE id_inv = %s', (id_inv,))
+            invitado = cur.fetchone()
 
-    # Deshabilitar el QR (habilitado = 0)
-    cur.execute('UPDATE invitados SET habilitado = 0 WHERE id_inv = %s', (id_inv))
-    mysql.connection.commit()
-    cur.close()
-    return jsonify({'status': 'disabled', 'message': 'QR deshabilitado correctamente.'}), 200
+            if invitado is None:
+                return jsonify({'status': 'not_found', 'message': 'No se encontró el invitado.'}), 404
+
+            habilitado = invitado[0]
+            if habilitado == 0:
+                return jsonify({'status': 'qr_already_disabled', 'message': 'Este QR ya está deshabilitado.'}), 200
+
+            # Deshabilitar el QR (habilitado = 0)
+            cur.execute('UPDATE invitados SET habilitado = 0 WHERE id_inv = %s', (id_inv,))
+            mysql.connection.commit()
+
+        return jsonify({'status': 'success', 'message': 'QR deshabilitado correctamente.'}), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Ocurrió un error: {str(e)}'}), 500
+
 
 @app.route('/generarInvitados', methods=['POST'])
 @jwt_required()
@@ -221,14 +374,26 @@ def generarNov():
         # Obtener los datos del formulario
         titulo = request.form.get('titulo')
         texto = request.form.get('texto')
-        imagen_referencia = request.files.get('image')
+        imagen_referencia1= request.files.get('image1')
+        imagen_referencia2 = request.files.get('image2')
+        imagen_referencia3 = request.files.get('image3')
+
         video = request.files.get('video')
 
         # Convertir imagen a base64 si existe
-        image_base64 = None
-        if imagen_referencia:
-            resized_image = resize_image(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        image_base641 = None
+        image_base642 = None
+        image_base643 = None
+
+        if imagen_referencia1:
+            resized_image = resize_image(imagen_referencia1)
+            image_base641 = base64.b64encode(resized_image.read()).decode('utf-8')
+        if imagen_referencia2:
+            resized_image = resize_image(imagen_referencia2)
+            image_base642 = base64.b64encode(resized_image.read()).decode('utf-8')
+        if imagen_referencia3:
+            resized_image = resize_image(imagen_referencia3)
+            image_base643 = base64.b64encode(resized_image.read()).decode('utf-8')
 
         # Convertir video a base64 si existe
         video_base64 = None
@@ -238,10 +403,10 @@ def generarNov():
         # Crear cursor y consulta SQL
         cur = mysql.connection.cursor()
         sql_insert_query = """
-            INSERT INTO reportes (titulo, texto, img, video) 
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO libroNovedades (titulo, texto, img1,img2,img3, video) 
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
-        insert_tuple = (titulo, texto, image_base64, video_base64)
+        insert_tuple = (titulo, texto, image_base641,image_base642,image_base643, video_base64)
         
         # Ejecutar la consulta e insertar los datos
         cur.execute(sql_insert_query, insert_tuple)
@@ -254,7 +419,6 @@ def generarNov():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generarReportes', methods=['POST'])
-@jwt_required()
 def generarRep():
     try:
         # Obtener los datos del formulario
@@ -262,45 +426,55 @@ def generarRep():
         ubicacion = request.form.get('ubicacion')
         descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
-        if imagen_referencia is None:
-            cur = mysql.connection.cursor()
-            sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion) VALUES (%s, %s, %s)"
-            insert_tuple = (nombre, ubicacion, descripcion)
-        resized_image = resize_image(imagen_referencia)
-        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        print(imagen_referencia)
+
+        if not all([nombre, ubicacion, descripcion]):
+            return jsonify({'error': 'Faltan datos obligatorios'}), 400
+
+        # Procesar la imagen si está presente
+        if imagen_referencia:
+            resized_image = resize_image(imagen_referencia)
+            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        else:
+            image_base64 = None  # O cargar una imagen predeterminada codificada en base64
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion, img) VALUES (%s, %s, %s, %s)"
+        sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion, image) VALUES (%s, %s, %s, %s)"
         insert_tuple = (nombre, ubicacion, descripcion, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
-
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
     
 @app.route('/generarCasilla', methods=['POST'])
 @jwt_required()
 def generarCass():
     try:
         # Obtener los datos del formulario
-        depto= request.form.get('depto')
-        descripcion = request.form.get('descripcion')
+        data = request.get_json()
+        depto = data.get('depto')
+        descripcion = data.get('descripcion')
         imagen_referencia = request.files.get('image')
 
-        resized_image = resize_image(imagen_referencia)
-        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        if imagen_referencia:
+            resized_image = resize_image(imagen_referencia)
+            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        else:
+             image_base64 = None  # O cargar una imagen predeterminada codificada en base64
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO casilla (depto, descripcion ,img) VALUES ( %s, %s, %s)"
+        sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
         insert_tuple = (depto,descripcion, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
+        print(request.content_type)  # Debe ser 'multipart/form-data'
 
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
@@ -395,7 +569,7 @@ def generarNot():
         cuerpo = request.form.get('cuerpo')
 
         # Verificar si se recibe el archivo correctamente
-        imagen_referencia = request.files.get('img')
+        imagen_referencia = request.files.get('image')
         if imagen_referencia is None:
             return jsonify({'error': 'No se recibió ninguna imagen'}), 400
 
@@ -404,7 +578,7 @@ def generarNot():
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO noticias (titulo, bajada, cuerpo, img) VALUES (%s, %s, %s, %s)"
+        sql_insert_query = "INSERT INTO noticias (titulo, bajada, cuerpo, image) VALUES (%s, %s, %s, %s)"
         insert_tuple = (titulo, bajada, cuerpo, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
@@ -456,10 +630,13 @@ def api_get_invitados():
         invitado_json = [
             OrderedDict([
                 ('id_inv', invitado[0]),        
-                ('nombre', invitado[1]),        
-                ('rut', invitado[2]),  
-                ('depto', invitado[3]),  
-                ('fecha_creacion', invitado[4])
+                ('nombre', invitado[1]),    
+                ('apellido', invitado[2]),        
+                ('rut', invitado[3]),  
+                ('depto', invitado[4]),  
+                ('fecha_creacion', invitado[5]),
+                ('fecha_expiracion', invitado[7])
+
             ])
             for invitado in invitados
         ]
@@ -556,7 +733,7 @@ def api_get_amenities():
 
 
 @app.route('/reportes', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def api_get_reportes():
     try:
         cursor = mysql.connection.cursor()
@@ -570,7 +747,7 @@ def api_get_reportes():
                 ('nombre', reporte[1]),        
                 ('ubicacion', reporte[2]),
                 ('descripcion', reporte[3]),
-                ('img', reporte[4]),
+                ('image', reporte[4]),
                 ('fecha_creacion', reporte[5]),
 
 
@@ -596,7 +773,7 @@ def api_get_casillas():
                 ('id_cas', reporte[0]),        
                 ('depto', reporte[1]),        
                 ('descripcion', reporte[2]),
-                ('img', reporte[3])    
+                ('image', reporte[3])    
 
             ])
             for reporte in reportes
