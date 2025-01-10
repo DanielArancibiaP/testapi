@@ -121,9 +121,9 @@ def modPerfil():
         if password:
             campos_a_actualizar.append("password=%s")
             valores.append(password)
-        if password:
+        if apellido:
             campos_a_actualizar.append("apellido=%s")
-            valores.append(password)
+            valores.append(apellido)
 
         if not campos_a_actualizar:
             return jsonify({'status': 'error', 'message': 'No se proporcionaron campos para actualizar'}), 400
