@@ -20,7 +20,8 @@ app.config['MYSQL_USER'] = 'admin_flutt'
 app.config['MYSQL_PASSWORD'] = 'lOtTetiz8P'
 app.config['MYSQL_DB'] = 'admin_flutt'
 app.config["JWT_SECRET_KEY"] = "1234"  # Cambia esta clave
-
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del archivo a 16 MB
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
 jwt = JWTManager(app)
 
 mysql = MySQL(app)
@@ -102,6 +103,7 @@ def modPerfil():
         password = data.get('password')
         telefono = data.get('telefono')
         nombre = data.get('nombre')
+        apellido = data.get('apellido')
 
         if not email:
             return jsonify({'status': 'error', 'message': 'El email es obligatorio'}), 400
@@ -118,6 +120,9 @@ def modPerfil():
             valores.append(telefono)
         if password:
             campos_a_actualizar.append("password=%s")
+            valores.append(password)
+        if password:
+            campos_a_actualizar.append("apellido=%s")
             valores.append(password)
 
         if not campos_a_actualizar:
@@ -426,17 +431,20 @@ def generarRep():
         ubicacion = request.form.get('ubicacion')
         descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
-        print(imagen_referencia)
+
+        # Diagnóstico
+        print("Datos del formulario:", request.form)
+        print("Archivos recibidos:", request.files)
 
         if not all([nombre, ubicacion, descripcion]):
             return jsonify({'error': 'Faltan datos obligatorios'}), 400
 
-        # Procesar la imagen si está presente
-        if imagen_referencia:
+        # Validar la imagen
+        if imagen_referencia and imagen_referencia.filename:
             resized_image = resize_image(imagen_referencia)
             image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
         else:
-            image_base64 = None  # O cargar una imagen predeterminada codificada en base64
+            return jsonify({'error': 'El archivo de imagen no fue enviado o está vacío'}), 400
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
@@ -448,6 +456,7 @@ def generarRep():
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
+        print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
     
