@@ -423,6 +423,18 @@ def generarNov():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def resize_image2(file):
+    try:
+        image = Image.open(file)
+        image.thumbnail((800, 800))  # Redimensionar si es necesario
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format=image.format)
+        img_byte_arr.seek(0)
+        return img_byte_arr
+    except Exception as e:
+        print("Error al redimensionar la imagen:", str(e))
+        raise e
+
 @app.route('/generarReportes', methods=['POST'])
 def generarRep():
     try:
@@ -436,12 +448,13 @@ def generarRep():
         print("Datos del formulario:", request.form)
         print("Archivos recibidos:", request.files)
 
+        # Validar campos obligatorios
         if not all([nombre, ubicacion, descripcion]):
             return jsonify({'error': 'Faltan datos obligatorios'}), 400
 
         # Validar la imagen
         if imagen_referencia and imagen_referencia.filename:
-            resized_image = resize_image(imagen_referencia)
+            resized_image = resize_image2(imagen_referencia)
             image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
         else:
             return jsonify({'error': 'El archivo de imagen no fue enviado o está vacío'}), 400
@@ -453,12 +466,12 @@ def generarRep():
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
+
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
-
     
 @app.route('/generarCasilla', methods=['POST'])
 @jwt_required()
