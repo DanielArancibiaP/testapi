@@ -448,16 +448,12 @@ def generarRep():
         print("Datos del formulario:", request.form)
         print("Archivos recibidos:", request.files)
 
-        # Validar campos obligatorios
-        if not all([nombre, ubicacion, descripcion]):
-            return jsonify({'error': 'Faltan datos obligatorios'}), 400
-
         # Validar la imagen
         if imagen_referencia and imagen_referencia.filename:
             resized_image = resize_image2(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+            image_base64 = base64.b64encode(imagen_referencia.read()).decode('utf-8')
         else:
-            return jsonify({'error': 'El archivo de imagen no fue enviado o está vacío'}), 400
+            image_base64= None
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
