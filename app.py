@@ -471,7 +471,7 @@ def generarRep():
 
 import os
 
-UPLOAD_FOLDER = 'https://copperprotek.com/carrusel/'  # Carpeta donde se guardarán las imágenes
+UPLOAD_FOLDER = 'https://copperprotek.com/carrusel'  # Carpeta donde se guardarán las imágenes
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/upload4', methods=['POST'])
@@ -487,7 +487,7 @@ def upload():
             image_path = os.path.join(UPLOAD_FOLDER, image.filename)
             image.save(image_path)
             print(f"Imagen guardada en: {image_path}")
-            nombreImage= image.filename
+        nombreImage= image.filename
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
         insert_tuple = (campo1,campo2, nombreImage)
