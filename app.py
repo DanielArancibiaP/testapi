@@ -480,15 +480,13 @@ def generarCass():
         imagen_referencia = request.files.get('image')
 
         if imagen_referencia:
-            resized_image = resize_image(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-        else:
-             image_base64 = None  # O cargar una imagen predeterminada codificada en base64
+        # Por ejemplo, guardar la imagen temporalmente
+            imagen_referencia.save(f'./https://copperprotek.com/foto/{imagen_referencia.filename}') # O cargar una imagen predeterminada codificada en base64
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
-        insert_tuple = (depto,descripcion, image_base64)
+        insert_tuple = (depto,descripcion, imagen_referencia)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
