@@ -471,8 +471,7 @@ def generarRep():
 
 import os
 
-UPLOAD_FOLDER = 'https://copperprotek.com/carrusel'  # Carpeta donde se guardarán las imágenes
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = 'https://copperprotek.com/'  # Carpeta donde se guardarán las imágenes
 
 @app.route('/upload4', methods=['POST'])
 def upload():
