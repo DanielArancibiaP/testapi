@@ -468,7 +468,46 @@ def generarRep():
     except Exception as e:
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
-    
+
+import os
+
+UPLOAD_FOLDER = 'https://copperprotek.com/carrusel/'  # Carpeta donde se guardarán las imágenes
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/upload4', methods=['POST'])
+def upload():
+    try:
+        # Obtener los campos de texto
+        campo1 = request.form.get('campo1')
+        campo2 = request.form.get('campo2')
+
+        # Obtener la imagen
+        image = request.files.get('image')
+        if image:
+            image_path = os.path.join(UPLOAD_FOLDER, image.filename)
+            image.save(image_path)
+            print(f"Imagen guardada en: {image_path}")
+            nombreImage= image.filename
+        cur = mysql.connection.cursor()
+        sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
+        insert_tuple = (campo1,campo2, nombreImage)
+        cur.execute(sql_insert_query, insert_tuple)
+        mysql.connection.commit()
+        cur.close()
+        # Imprimir datos recibidos
+        print(f"Campo 1: {campo1}")
+        print(f"Campo 2: {campo2}")
+
+        return {
+            "message": "Datos recibidos correctamente",
+            "campo1": campo1,
+            "campo2": campo2,
+            "image_path": image_path if image else None
+        }, 200
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"message": "Error al procesar la solicitud"}, 500
+
 @app.route('/generarCasilla', methods=['POST'])
 @jwt_required()
 def generarCass():
