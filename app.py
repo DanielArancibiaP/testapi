@@ -444,14 +444,10 @@ def generarRep():
         descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
 
-        # Diagnóstico
-        print("Datos del formulario:", request.form)
-        print("Archivos recibidos:", request.files)
-
         # Validar la imagen
         if imagen_referencia and imagen_referencia.filename:
-            resized_image = resize_image2(imagen_referencia)
-            image_base64 = base64.b64encode(imagen_referencia.read()).decode('utf-8')
+            resized_image = resize_image(imagen_referencia)
+            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
         else:
             image_base64= None
 
@@ -469,43 +465,7 @@ def generarRep():
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
-import os
 
-UPLOAD_FOLDER = 'https://copperprotek.com/'  # Carpeta donde se guardarán las imágenes
-
-@app.route('/upload4', methods=['POST'])
-def upload():
-    try:
-        # Obtener los campos de texto
-        campo1 = request.form.get('campo1')
-        campo2 = request.form.get('campo2')
-
-        # Obtener la imagen
-        image = request.files.get('image')
-        if image:
-            image_path = os.path.join(UPLOAD_FOLDER, image.filename)
-            image.save(image_path)
-            print(f"Imagen guardada en: {image_path}")
-        nombreImage= image.filename
-        cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
-        insert_tuple = (campo1,campo2, nombreImage)
-        cur.execute(sql_insert_query, insert_tuple)
-        mysql.connection.commit()
-        cur.close()
-        # Imprimir datos recibidos
-        print(f"Campo 1: {campo1}")
-        print(f"Campo 2: {campo2}")
-
-        return {
-            "message": "Datos recibidos correctamente",
-            "campo1": campo1,
-            "campo2": campo2,
-            "image_path": image_path if image else None
-        }, 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"message": "Error al procesar la solicitud"}, 500
 
 @app.route('/generarCasilla', methods=['POST'])
 @jwt_required()
@@ -517,14 +477,17 @@ def generarCass():
         descripcion = data.get('descripcion')
         imagen_referencia = request.files.get('image')
 
-        if imagen_referencia:
-        # Por ejemplo, guardar la imagen temporalmente
-            imagen_referencia.save(f'./https://copperprotek.com/foto/{imagen_referencia.filename}') # O cargar una imagen predeterminada codificada en base64
+        if imagen_referencia and imagen_referencia.filename:
+            resized_image = resize_image(imagen_referencia)
+            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+        else:
+            image_base64= None
+
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
-        insert_tuple = (depto,descripcion, imagen_referencia)
+        insert_tuple = (depto,descripcion, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
