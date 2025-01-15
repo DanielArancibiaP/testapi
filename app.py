@@ -468,7 +468,7 @@ def generarRep():
 
 
 @app.route('/generarCasilla', methods=['POST'])
-@jwt_required()
+#@jwt_required()
 def generarCass():
     try:
         # Obtener los datos del formulario
