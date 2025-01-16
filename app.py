@@ -471,9 +471,11 @@ def generarRep():
 #@jwt_required()
 def generarCass():
     try:
+        data = request.json
+
         # Obtener los datos del formulario
-        depto = request.form.get('depto')
-        descripcion = request.form.get('descripcion')
+        depto = data.get('depto')
+        descripcion = data.get('descripcion')
         imagen_referencia = request.files.get('image')
 
         if imagen_referencia and imagen_referencia.filename:
