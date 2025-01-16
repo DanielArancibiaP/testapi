@@ -476,19 +476,14 @@ def generarCass():
         # Obtener los datos del formulario
         depto = data.get('depto')
         descripcion = data.get('descripcion')
-        imagen_referencia = request.files.get('image')
+        imagen_referencia = data.get('image')
 
-        if imagen_referencia and imagen_referencia.filename:
-            resized_image = resize_image(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-        else:
-            image_base64= None
-
+        
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
-        insert_tuple = (depto,descripcion, image_base64)
+        insert_tuple = (depto,descripcion, imagen_referencia)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
