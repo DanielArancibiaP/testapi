@@ -472,9 +472,8 @@ def generarRep():
 def generarCass():
     try:
         # Obtener los datos del formulario
-        data = request.get_json()
-        depto = data.get('depto')
-        descripcion = data.get('descripcion')
+        depto = request.form.get('depto')
+        descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
 
         if imagen_referencia and imagen_referencia.filename:
