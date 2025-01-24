@@ -434,27 +434,79 @@ def resize_image2(file):
     except Exception as e:
         print("Error al redimensionar la imagen:", str(e))
         raise e
+    
+@app.route('/generarBeneficios', methods=['POST'])
+def generarBen():
+    try:
+        # Obtener los datos del formulario
+        data = request.json
+
+        nombre = data.get('nombre')
+        descripcion = data.get('descripcion')
+        imagen_referencia = data.get('image')
+
+        imagen_referencia = request.files.get('image')
+        if imagen_referencia is None:
+         return jsonify({'error': 'No se recibió ninguna imagen'}), 400
+
+        resized_image = resize_image(imagen_referencia)  # Verifica si resize_image está funcionando correctamente
+        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+
+        # Insertar los datos en la base de datos MySQL
+        cur = mysql.connection.cursor()
+        sql_insert_query = "INSERT INTO beneficios (nombre, descripcion, image) VALUES (%s, %s, %s)"
+        insert_tuple = (nombre,  descripcion, image_base64)
+        cur.execute(sql_insert_query, insert_tuple)
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({'message': 'Se ingresó correctamente'}), 201
+
+    except Exception as e:
+        print("Error:", str(e))
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/listarBeneficios', methods=['GET'])
+@jwt_required()
+def api_beneficios():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM beneficios ORDER BY id_ben DESC')
+        invitados = cursor.fetchall()
+        cursor.close()
+
+        invitado_json = [
+            OrderedDict([
+                ('id_ben', invitado[0]),        
+                ('nombre', invitado[1]),        
+                ('descripcion', invitado[2]),  
+                ('img', invitado[3]),  
+                ('fecha_creacion', invitado[4])
+            ])
+            for invitado in invitados
+        ]
+        return jsonify(invitado_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/generarReportes', methods=['POST'])
 def generarRep():
     try:
         # Obtener los datos del formulario
-        nombre = request.form.get('nombre')
-        ubicacion = request.form.get('ubicacion')
-        descripcion = request.form.get('descripcion')
-        imagen_referencia = request.files.get('image')
+        data = request.json
 
-        # Validar la imagen
-        if imagen_referencia and imagen_referencia.filename:
-            resized_image = resize_image(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-        else:
-            image_base64= None
+        nombre = data.get('nombre')
+        ubicacion = data.get('ubicacion')
+        descripcion = data.get('descripcion')
+        imagen_referencia = data.get('image')
+
+
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion, image) VALUES (%s, %s, %s, %s)"
-        insert_tuple = (nombre, ubicacion, descripcion, image_base64)
+        insert_tuple = (nombre, ubicacion, descripcion, imagen_referencia)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
@@ -574,7 +626,7 @@ def api_libro_novedades():
 
 @app.route('/generarNoticias', methods=['POST'])
 @jwt_required()
-def generarNot():
+def generarNot():   
     try:
         # Obtener los datos del formulario
         titulo = request.form.get('titulo')
@@ -695,6 +747,54 @@ def serialize_timedelta(obj):
 def formatoFecha(obj):
     return obj.strftime("%Y/%m/%d")
 
+
+@app.route('/listadoAmenities', methods=['GET'])
+@jwt_required()
+def api_get_amen():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM amenities ORDER BY id_amen DESC')
+        invitados = cursor.fetchall()
+        cursor.close()
+
+        invitado_json = [
+            OrderedDict([
+                ('id_amen', invitado[0]),        
+                ('nombre', invitado[1]),    
+                ('descripcion', invitado[2]),        
+                ('cupos', invitado[3]),  
+                ('icono', invitado[4]),  
+                ('estado', invitado[5]),
+
+            ])
+            for invitado in invitados
+        ]
+        return jsonify(invitado_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/crearAmenities', methods=['POST'])
+@jwt_required()
+def crearAmen():
+    data = request.json
+    nombre = data.get('nombre')
+    descripcion = data.get('descripcion')
+    cupos = data.get('cupos')
+    estado = 1
+    icono= request.files.get('icono')
+
+    cur = mysql.connection.cursor()
+    try:
+        cur.execute('INSERT INTO `amenities`(`nombre`, `descripcion`, `cupos`, `icono`, `estado`) VALUES (%s, %s, %s, %s, %s)', (nombre, descripcion,cupos, icono, estado))
+        mysql.connection.commit()
+        return jsonify({'message': 'Se ingresó correctamente'}), 201
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        
 @app.route('/generarAmenities', methods=['POST'])
 @jwt_required()
 def generarAmen():
@@ -702,12 +802,10 @@ def generarAmen():
     nombre = data.get('nombre')
     fecha = data.get('fecha')
     hora_entrada = data.get('hora_entrada')
-    descripcion = data.get('descripcion')
-    hora_salida = data.get('hora_salida')
-
+    estado= "pendiente"
     cur = mysql.connection.cursor()
     try:
-        cur.execute('INSERT INTO `amenities`(`nombre`, `descripcion`, `fecha`, `hora_entrada`, `hora_salida`) VALUES (%s, %s, %s, %s, %s)', (nombre, descripcion,fecha, hora_entrada, hora_salida))
+        cur.execute('INSERT INTO `amenities`(`nombre`, `fecha`, `hora_entrada`, `estado`) VALUES (%s, %s, %s)', (nombre, fecha, hora_entrada, estado))
         mysql.connection.commit()
         return jsonify({'message': 'Se ingresó correctamente'}), 201
     except Exception as e:
