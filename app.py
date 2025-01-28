@@ -372,56 +372,56 @@ def resize_image(image, max_size=(800, 800)):
     
     return buffer
 
-#@app.route('/generarLibroNovedades', methods=['POST'])
-#@jwt_required()
-#def generarNov():
-#    try:
-#        # Obtener los datos del formulario
-#        titulo = request.form.get('titulo')
-#        texto = request.form.get('texto')
-#        imagen_referencia1= request.files.get('image1')
-#        imagen_referencia2 = request.files.get('image2')
-#        imagen_referencia3 = request.files.get('image3')
-#
-#        video = request.files.get('video')
-#
-#        # Convertir imagen a base64 si existe
-#        image_base641 = None
-#        image_base642 = None
-#        image_base643 = None
-#
-#        if imagen_referencia1:
-#            resized_image = resize_image(imagen_referencia1)
-#            image_base641 = base64.b64encode(resized_image.read()).decode('utf-8')
-#        if imagen_referencia2:
-#            resized_image = resize_image(imagen_referencia2)
-#            image_base642 = base64.b64encode(resized_image.read()).decode('utf-8')
-#        if imagen_referencia3:
-#            resized_image = resize_image(imagen_referencia3)
-#            image_base643 = base64.b64encode(resized_image.read()).decode('utf-8')
-#
-#        # Convertir video a base64 si existe
-#        video_base64 = None
-#        if video:
-#            video_base64 = base64.b64encode(video.read()).decode('utf-8')
-#
-#        # Crear cursor y consulta SQL
-#        cur = mysql.connection.cursor()
-#        sql_insert_query = """
-#            INSERT INTO libroNovedades (titulo, texto, img1,img2,img3, video) 
-#            VALUES (%s, %s, %s, %s, %s, %s)
-#        """
-#        insert_tuple = (titulo, texto, image_base641,image_base642,image_base643, video_base64)
-#        
-#        # Ejecutar la consulta e insertar los datos
-#        cur.execute(sql_insert_query, insert_tuple)
-#        mysql.connection.commit()
-#        cur.close()
-#
-#        return jsonify({'message': 'Se ingresó correctamente'}), 201
-#
-#    except Exception as e:
-#        return jsonify({'error': str(e)}), 500
+@app.route('/generarLibroNovedades', methods=['POST'])
+@jwt_required()
+def generarNov():
+    try:
+        # Obtener los datos del formulario
+        titulo = request.form.get('titulo')
+        texto = request.form.get('texto')
+        imagen_referencia1= request.files.get('image1')
+        imagen_referencia2 = request.files.get('image2')
+        imagen_referencia3 = request.files.get('image3')
+
+        video = request.files.get('video')
+
+        # Convertir imagen a base64 si existe
+        image_base641 = None
+        image_base642 = None
+        image_base643 = None
+
+        if imagen_referencia1:
+            resized_image = resize_image(imagen_referencia1)
+            image_base641 = base64.b64encode(resized_image.read()).decode('utf-8')
+        if imagen_referencia2:
+            resized_image = resize_image(imagen_referencia2)
+            image_base642 = base64.b64encode(resized_image.read()).decode('utf-8')
+        if imagen_referencia3:
+            resized_image = resize_image(imagen_referencia3)
+            image_base643 = base64.b64encode(resized_image.read()).decode('utf-8')
+
+        # Convertir video a base64 si existe
+        video_base64 = None
+        if video:
+            video_base64 = base64.b64encode(video.read()).decode('utf-8')
+
+        # Crear cursor y consulta SQL
+        cur = mysql.connection.cursor()
+        sql_insert_query = """
+            INSERT INTO libroNovedades (titulo, texto, img1,img2,img3, video) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        insert_tuple = (titulo, texto, image_base641,image_base642,image_base643, video_base64)
+        
+        # Ejecutar la consulta e insertar los datos
+        cur.execute(sql_insert_query, insert_tuple)
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({'message': 'Se ingresó correctamente'}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def resize_image2(file):
     try:
@@ -577,29 +577,29 @@ def generarUsr():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/generarLibroNovedades', methods=['POST'])
-@jwt_required()
-def generarLib():
-    try:
-        # Obtener los datos del formulario
-        texto= request.form.get('texto')
-        imagen_referencia = request.files.get('image')
-
-        resized_image = resize_image(imagen_referencia)
-        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-
-        # Insertar los datos en la base de datos MySQL
-        cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO libroNovedades (texto, img) VALUES ( %s, %s)"
-        insert_tuple = (texto, image_base64)
-        cur.execute(sql_insert_query, insert_tuple)
-        mysql.connection.commit()
-        cur.close()
-
-        return jsonify({'message': 'Se ingresó correctamente'}), 201
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#@app.route('/generarLibroNovedades', methods=['POST'])
+#@jwt_required()
+#def generarLib():
+#    try:
+#        # Obtener los datos del formulario
+#        texto= request.form.get('texto')
+#        imagen_referencia = request.files.get('image')
+#
+#        resized_image = resize_image(imagen_referencia)
+#        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+#
+#        # Insertar los datos en la base de datos MySQL
+#        cur = mysql.connection.cursor()
+#        sql_insert_query = "INSERT INTO libroNovedades (texto, img) VALUES ( %s, %s)"
+#        insert_tuple = (texto, image_base64)
+#        cur.execute(sql_insert_query, insert_tuple)
+#        mysql.connection.commit()
+#        cur.close()
+#
+#        return jsonify({'message': 'Se ingresó correctamente'}), 201
+#
+#    except Exception as e:
+#        return jsonify({'error': str(e)}), 500
 
 @app.route('/libroNovedades', methods=['GET'])
 @jwt_required()
@@ -805,7 +805,7 @@ def generarAmen():
     estado= "pendiente"
     cur = mysql.connection.cursor()
     try:
-        cur.execute('INSERT INTO `amenities`(`nombre`, `fecha`, `hora_entrada`, `estado`) VALUES (%s, %s, %s)', (nombre, fecha, hora_entrada, estado))
+        cur.execute('INSERT INTO `amenities`(`nombre`, `fecha`, `hora_entrada`, `estado`) VALUES (%s, %s, %s,%s)', (nombre, fecha, hora_entrada, estado))
         mysql.connection.commit()
         return jsonify({'message': 'Se ingresó correctamente'}), 201
     except Exception as e:
