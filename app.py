@@ -466,6 +466,54 @@ def generarBen():
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
     
+@app.route('/generarNuevoProductoMarket', methods=['POST'])
+def generarNuevoProductoMarket():
+    try:
+        # Obtener los datos del formulario
+        data = request.json
+
+        nombre = data.get('nombreProducto')
+        precio = data.get('precio')
+        imagen_referencia = data.get('image')
+        image_base64= None
+
+        if imagen_referencia:
+            resized_image = resize_image(imagen_referencia)
+            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
+            
+    
+
+
+        # Insertar los datos en la base de datos MySQL
+        cur = mysql.connection.cursor()
+        sql_insert_query = "INSERT INTO marketplace (nombreProducto, descripcion, image) VALUES (%s, %s, %s)"
+        insert_tuple = (nombre,  precio, image_base64)
+        cur.execute(sql_insert_query, insert_tuple)
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({'message': 'Se ingresó correctamente'}), 201
+
+    except Exception as e:
+        print("Error:", str(e))
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/marketplace", methods=['GET'])
+@jwt_required()
+def get_deptos():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM marketplace')
+        marketplaces = cursor.fetchall()
+        cursor.close()
+
+        usuarios_json = [{'id_mark': marketplace[0], 'nombreProducto':marketplace[1], 'precio':marketplace[2], 'image':marketplace[3], 'fecha_posteo':marketplace[4]} for marketplace in marketplaces]
+        return jsonify(usuarios_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
+
 @app.route('/listarBeneficios', methods=['GET'])
 @jwt_required()
 def api_beneficios():
