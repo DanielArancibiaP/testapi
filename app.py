@@ -500,7 +500,7 @@ def generarNuevoProductoMarket():
 
 @app.route("/marketplace", methods=['GET'])
 @jwt_required()
-def get_deptos():
+def get_market():
     try:
         cursor = mysql.connection.cursor()
         cursor.execute('SELECT * FROM marketplace')
