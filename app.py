@@ -486,7 +486,7 @@ def generarNuevoProductoMarket():
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO marketplace (nombreProducto, descripcion, image) VALUES (%s, %s, %s)"
+        sql_insert_query = "INSERT INTO marketplace (nombreProducto, precio, image) VALUES (%s, %s, %s)"
         insert_tuple = (nombre,  precio, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
