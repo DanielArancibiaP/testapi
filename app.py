@@ -86,7 +86,7 @@ def index():
             'email': usuario[3],
             'depto': usuario[6],
             'telefono': usuario[7],
-            'tipo_usuario': usuario[8]
+            'tipo_usuario': usuario[9]
 
         }
 
