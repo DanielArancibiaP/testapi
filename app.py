@@ -7,6 +7,8 @@ from flask_cors import CORS
 from collections import OrderedDict
 import datetime
 import hashlib
+from flask_mail import Mail, Message
+
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity,decode_token
 )
@@ -24,7 +26,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del arc
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
 jwt = JWTManager(app)
 
+# Configuración del servidor de correo
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Cambia según tu proveedor
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'ventas@porteria.cl'
+app.config['MAIL_PASSWORD'] = 'noho fcrp ughf qrna'  # Usa un token de aplicación si tu correo lo requiere
+app.config['MAIL_DEFAULT_SENDER'] = 'ventas@porteria.cl'
 mysql = MySQL(app)
+mail = Mail(app)
 
 # Ruta para obtener todos los usuarios de la tabla 'usuarios'
 @app.route("/usuarios", methods=['GET'])
@@ -47,11 +57,29 @@ def get_usuarios():
 def get_deptos():
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT depto FROM users')
+        cursor.execute('SELECT * FROM departamentos')
         usuarios = cursor.fetchall()
         cursor.close()
 
-        usuarios_json = [{'depto': usuario[0]} for usuario in usuarios]
+        usuarios_json = [{'numeroDepto': usuario[1]} for usuario in usuarios]
+        return jsonify(usuarios_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route("/deptosPorUser", methods=['POST'])
+@jwt_required()
+def get_deptosUser():
+    try:
+        data= request.json
+        userID= data.get('idUser')
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM departamentos where id_arrendatario=%s', (userID))
+        usuarios = cursor.fetchall()
+        cursor.close()
+
+        usuarios_json = [{'numeroDepto': usuario[1]} for usuario in usuarios]
         return jsonify(usuarios_json), 200
     except Exception as e:
         print(e)
@@ -84,10 +112,9 @@ def index():
             'nombreUser': usuario[1],
             'apellido': usuario[2],
             'email': usuario[3],
-            'depto': usuario[6],
-            'telefono': usuario[7],
-            'tipo_usuario': usuario[9]
-
+            'telefono': usuario[6],
+            'torre': usuario[7],
+            'tipo_usuario': usuario[8]
         }
 
         return jsonify({'status': 'success', 'access_token': access_token, 'user_data': usuario_json}), 200
@@ -140,6 +167,33 @@ def modPerfil():
         return jsonify({'status': 'success', 'message': 'Usuario modificado con éxito'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error del servidor: {str(e)}'}), 500
+
+
+@app.route('/restaurarContraseña', methods=['POST'])
+@jwt_required()
+def restContra():
+    try:
+        data = request.json
+        email = data.get('email')
+
+        if not email:
+            return jsonify({'status': 'error', 'message': 'El email es obligatorio'}), 400
+
+        reset_link = "https://tu-dominio.com/restaurar?token=XYZ123" 
+
+        msg = Message(
+            subject='Servicio de recuperación de contraseña',
+            recipients=[email],  
+            html=f"""
+                <p>Ingrese al siguiente enlace para restaurar su contraseña:</p>
+                <p><a href="{reset_link}" style="text-decoration:none; color:#007bff; font-weight:bold;">Restaurar contraseña</a></p>
+                <p>Si no solicitaste este cambio, ignora este mensaje.</p>
+            """
+        )
+        mail.send(msg)
+        return jsonify({'status': 'success', 'message': 'Correo enviado con éxito'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error al enviar el correo: {str(e)}'}), 500
 
 
 @app.route('/validarToken', methods=['POST'])
@@ -310,7 +364,6 @@ def generarInv2():
     data = request.json
     nombre = data.get('nombre')
     tipo_doc= data.get('tipo_doc')
-    numero_doc= data.get('numero_doc')
     pais= data.get('pais')
     sexo= data.get('sexo')
     casa= data.get('casa')
@@ -322,7 +375,7 @@ def generarInv2():
 
     cur = mysql.connection.cursor()
     try:
-        cur.execute('INSERT INTO invitadosMrz (nombre, tipo_doc, numero_doc, pais, sexo,nombre_guardia, nom_porteria, casa, patente, comentarios) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', (nombre,tipo_doc, numero_doc, pais, sexo,nombre_guardia,nom_porteria,casa, patente, comentarios))
+        cur.execute('INSERT INTO invitadosMrz (nombre, tipo_doc, pais, sexo,nombre_guardia, nom_porteria, casa, patente, comentarios) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)', (nombre,tipo_doc, numero_doc, pais, sexo,nombre_guardia,nom_porteria,casa, patente, comentarios))
         mysql.connection.commit()
         return jsonify({'message': 'Se ingresó correctamente'}), 201
     except Exception as e:
