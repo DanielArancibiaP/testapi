@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from PIL import Image, ExifTags
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request,send_from_directory
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 from collections import OrderedDict
@@ -772,6 +772,9 @@ def generarNot():
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 @app.route('/generarNoticias2', methods=['POST'])
 def generarNot2():   
