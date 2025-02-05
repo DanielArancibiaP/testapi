@@ -8,6 +8,8 @@ from collections import OrderedDict
 import datetime
 import hashlib
 from flask_mail import Mail, Message
+from werkzeug.utils import secure_filename
+import os
 
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity,decode_token
@@ -21,9 +23,13 @@ app.config['MYSQL_HOST'] = '167.71.118.217'
 app.config['MYSQL_USER'] = 'admin_flutt'
 app.config['MYSQL_PASSWORD'] = 'lOtTetiz8P'
 app.config['MYSQL_DB'] = 'admin_flutt'
-app.config["JWT_SECRET_KEY"] = "1234"  # Cambia esta clave
+app.config["JWT_SECRET_KEY"] = "1234"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False  # Token sin expiración
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del archivo a 16 MB
-app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', 'jpeg']
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "imagenes")  # Carpeta en la raíz del proyecto
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 jwt = JWTManager(app)
 
 # Configuración del servidor de correo
@@ -120,6 +126,18 @@ def index():
         return jsonify({'status': 'success', 'access_token': access_token, 'user_data': usuario_json}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error del servidor: {str(e)}'}), 500
+    
+@app.route('/logout', methods=['POST'])
+def logout():
+    data = request.json
+    token = data.get("token")
+
+    cur = mysql.connection.cursor()
+    cur.execute('UPDATE users SET token = NULL WHERE token = %s', (token,))
+    mysql.connection.commit()
+
+    return jsonify({"status": "success", "message": "Sesión cerrada"}), 200
+
 
 @app.route('/modificarPerfil', methods=['POST'])
 @jwt_required()
@@ -207,33 +225,26 @@ def validar_token():
     cur = mysql.connection.cursor()
     cur.execute('SELECT * FROM users WHERE token = %s', (token,))
     usuario = cur.fetchone()
-    usuario_json = {
-            'id_users': usuario[0],
-            'nombreUser': usuario[1],
-            'apellido': usuario[2],
-            'email': usuario[3],
-            'depto': usuario[6],
-            'telefono': usuario[7],
-            'tipo_usuario': usuario[8]
 
+    if not usuario:
+        return jsonify({"valid": False, "message": "Token inválido"}), 401
+
+    usuario_json = {
+        'id_users': usuario[0],
+        'nombreUser': usuario[1],
+        'apellido': usuario[2],
+        'email': usuario[3],
+        'telefono': usuario[6],
+        'torre': usuario[7],
+        'tipo_usuario': usuario[8]
     }
 
-    try:
-        # Decodifica el token usando `decode_token`
-        decoded_token = decode_token(token)
-        return jsonify({
-            "valid": True,
-            "message": "El token es válido.",
-            "decoded_token": decoded_token,
-            "user_data": usuario_json  # Opcional: muestra todo el token decodificado
-        }), 200
-        
-    except Exception as e:
-        # Maneja errores de decodificación
-        return jsonify({
-            "valid": False,
-            "message": str(e)
-        }), 401
+    return jsonify({
+        "valid": True,
+        "message": "El token es válido.",
+        "user_data": usuario_json
+    }), 200
+
 
 @app.route('/validarToken2', methods=['POST'])
 def validar_token2():
@@ -758,6 +769,57 @@ def generarNot():
         # Capturar el error y devolverlo en la respuesta
         return jsonify({'error': str(e)}), 500
 
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/generarNoticias2', methods=['POST'])
+def generarNot2():   
+    try:
+        # Obtener los datos del formulario
+        titulo = request.form.get('titulo')
+        bajada = request.form.get('bajada')
+        cuerpo = request.form.get('cuerpo')
+
+        # Verificar si la imagen fue enviada
+        imagen_referencia = request.files.get('image')
+        print("Título:", titulo)
+        print("Bajada:", bajada)
+        print("Cuerpo:", cuerpo)
+        print("Imagen recibida:", imagen_referencia)
+
+        if not imagen_referencia or not allowed_file(imagen_referencia.filename):
+            return jsonify({'error': 'Formato de imagen no permitido o imagen no proporcionada'}), 400
+        
+        # Generar un nombre seguro para la imagen (pero aún NO la guardamos)
+        filename = secure_filename(imagen_referencia.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+        # Intentar insertar en la BD primero
+        cur = mysql.connection.cursor()
+        sql_insert_query = "INSERT INTO noticias (titulo, bajada, cuerpo, img) VALUES (%s, %s, %s, %s)"
+        insert_tuple = (titulo, bajada, cuerpo, filename)
+        
+        try:
+            cur.execute(sql_insert_query, insert_tuple)
+            mysql.connection.commit()
+        except Exception as db_error:
+            mysql.connection.rollback()  # Revertir cambios si la BD falla
+            print(f"Error en la BD: {db_error}")
+            return jsonify({'error': 'Error al guardar en la base de datos'}), 500
+        finally:
+            cur.close()
+
+        # Si la BD guardó correctamente, ahora sí guardamos la imagen en la carpeta
+        imagen_referencia.save(filepath)
+
+        return jsonify({'message': 'Se ingresó correctamente', 'image_name': filename}), 201
+
+    except Exception as e:
+        print(f"Error en : {e}")
+        return jsonify({'error': str(e)}), 500
+
+
     
 @app.route('/noticias', methods=['GET'])
 @jwt_required()
@@ -945,11 +1007,38 @@ def api_get_amenities():
 
 
 @app.route('/reportes', methods=['GET'])
-#@jwt_required()
+@jwt_required()
 def api_get_reportes():
     try:
         cursor = mysql.connection.cursor()
         cursor.execute('SELECT * FROM reportes ORDER BY id_rep DESC')
+        reportes = cursor.fetchall()
+        cursor.close()
+
+        reporte_json = [
+            OrderedDict([
+                ('id_rep', reporte[0]),        
+                ('nombre', reporte[1]),        
+                ('ubicacion', reporte[2]),
+                ('descripcion', reporte[3]),
+                ('image', reporte[4]),
+                ('fecha_creacion', reporte[5]),
+
+
+            ])
+            for reporte in reportes
+        ]
+        return jsonify(reporte_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reportesPorDias', methods=['GET'])
+@jwt_required()
+def api_get_reportes_por_dias():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM `reportes` WHERE `fecha_creacion` >= NOW() - INTERVAL 7 DAY ORDER BY id_rep DESC')
         reportes = cursor.fetchall()
         cursor.close()
 
@@ -994,6 +1083,31 @@ def api_get_casillas():
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
+
+@app.route('/casillasPorDias', methods=['GET'])
+@jwt_required()
+def api_get_casillas_por_dias():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM `casilla` WHERE `fecha_creacion` >= NOW() - INTERVAL 3 DAY ORDER BY id_cas DESC')
+        reportes = cursor.fetchall()
+        cursor.close()
+
+        reporte_json = [
+            OrderedDict([
+                ('id_cas', reporte[0]),        
+                ('depto', reporte[1]),        
+                ('descripcion', reporte[2]),
+                ('image', reporte[3])    
+
+            ])
+            for reporte in reportes
+        ]
+        return jsonify(reporte_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/usr/modOnboarding', methods=['PUT'])
 @jwt_required()
 def update_onboarding():
