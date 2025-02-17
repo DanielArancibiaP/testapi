@@ -1,4 +1,5 @@
 import base64
+import time
 from io import BytesIO
 from PIL import Image, ExifTags
 from flask import Flask, jsonify, request,send_from_directory
@@ -98,6 +99,8 @@ def index():
         email = data.get('email')
         password = data.get('password')
 
+        print(f"Recibiendo datos - Email: {email}, Password: {password}")
+
         if not email or not password:
             return jsonify({'status': 'error', 'message': 'Email y password son requeridos.'}), 400
 
@@ -105,10 +108,13 @@ def index():
         cur.execute('SELECT * FROM users WHERE email = %s AND password = %s', (email, password))
         usuario = cur.fetchone()
 
+        print(f"Usuario encontrado: {usuario}")
+
         if not usuario:
             return jsonify({'status': 'not_found', 'message': 'Email o contraseña incorrectos.'}), 404
 
         access_token = create_access_token(identity=email)
+        print(f"Access token creado: {access_token}")
 
         cur.execute('UPDATE users SET token = %s WHERE email = %s', (access_token, email))
         mysql.connection.commit()
@@ -119,13 +125,15 @@ def index():
             'apellido': usuario[2],
             'email': usuario[3],
             'telefono': usuario[6],
-            'torre': usuario[7],
+            'torre': int(usuario[7]),  # Asegurar que sea int
             'tipo_usuario': usuario[8]
         }
 
         return jsonify({'status': 'success', 'access_token': access_token, 'user_data': usuario_json}), 200
     except Exception as e:
+        print(f"Error: {str(e)}")  # Agregar un print para capturar el error
         return jsonify({'status': 'error', 'message': f'Error del servidor: {str(e)}'}), 500
+
     
 @app.route('/logout', methods=['POST'])
 def logout():
@@ -440,47 +448,51 @@ def resize_image(image, max_size=(800, 800)):
 @jwt_required()
 def generarNov():
     try:
-        # Obtener los datos del formulario
         titulo = request.form.get('titulo')
         texto = request.form.get('texto')
-        imagen_referencia1= request.files.get('image1')
+
+        if not titulo or not texto:
+            return jsonify({'error': 'El título y el texto son obligatorios'}), 400
+
+        imagen_referencia1 = request.files.get('image1')
         imagen_referencia2 = request.files.get('image2')
         imagen_referencia3 = request.files.get('image3')
-
         video = request.files.get('video')
 
-        # Convertir imagen a base64 si existe
-        image_base641 = None
-        image_base642 = None
-        image_base643 = None
+        # Generar timestamp único
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
 
+        # Renombrar archivos de forma única
+        filename1 = f"{timestamp}_{secure_filename(imagen_referencia1.filename)}" if imagen_referencia1 else None
+        filename2 = f"{timestamp}_{secure_filename(imagen_referencia2.filename)}" if imagen_referencia2 else None
+        filename3 = f"{timestamp}_{secure_filename(imagen_referencia3.filename)}" if imagen_referencia3 else None
+        video_filename = f"{timestamp}_{secure_filename(video.filename)}" if video else None
+
+        try:
+            cur = mysql.connection.cursor()
+            sql_insert_query = """
+                INSERT INTO libroNovedades (titulo, texto, img1, img2, img3, video) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            insert_tuple = (titulo, texto, filename1, filename2, filename3, video_filename)
+            cur.execute(sql_insert_query, insert_tuple)
+            mysql.connection.commit()
+        except Exception as db_error:
+            mysql.connection.rollback()
+            print(f"Error en la BD: {db_error}")
+            return jsonify({'error': 'Error al guardar en la base de datos'}), 500
+        finally:
+            cur.close()
+
+        # Guardar los archivos después del commit
         if imagen_referencia1:
-            resized_image = resize_image(imagen_referencia1)
-            image_base641 = base64.b64encode(resized_image.read()).decode('utf-8')
+            imagen_referencia1.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
         if imagen_referencia2:
-            resized_image = resize_image(imagen_referencia2)
-            image_base642 = base64.b64encode(resized_image.read()).decode('utf-8')
+            imagen_referencia2.save(os.path.join(app.config["UPLOAD_FOLDER"], filename2))
         if imagen_referencia3:
-            resized_image = resize_image(imagen_referencia3)
-            image_base643 = base64.b64encode(resized_image.read()).decode('utf-8')
-
-        # Convertir video a base64 si existe
-        video_base64 = None
+            imagen_referencia3.save(os.path.join(app.config["UPLOAD_FOLDER"], filename3))
         if video:
-            video_base64 = base64.b64encode(video.read()).decode('utf-8')
-
-        # Crear cursor y consulta SQL
-        cur = mysql.connection.cursor()
-        sql_insert_query = """
-            INSERT INTO libroNovedades (titulo, texto, img1,img2,img3, video) 
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        insert_tuple = (titulo, texto, image_base641,image_base642,image_base643, video_base64)
-        
-        # Ejecutar la consulta e insertar los datos
-        cur.execute(sql_insert_query, insert_tuple)
-        mysql.connection.commit()
-        cur.close()
+            video.save(os.path.join(app.config["UPLOAD_FOLDER"], video_filename))
 
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
@@ -784,48 +796,47 @@ def generarNot2():
         bajada = request.form.get('bajada')
         cuerpo = request.form.get('cuerpo')
 
-        # Verificar si la imagen fue enviada
+        # Verificar que los campos obligatorios estén presentes
+        if not titulo or not cuerpo:
+            return jsonify({'error': 'El título y el cuerpo son obligatorios'}), 400
+
         imagen_referencia = request.files.get('image')
-        print("Título:", titulo)
-        print("Bajada:", bajada)
-        print("Cuerpo:", cuerpo)
-        print("Imagen recibida:", imagen_referencia)
+        filename = None
 
-        if not imagen_referencia or not allowed_file(imagen_referencia.filename):
-            return jsonify({'error': 'Formato de imagen no permitido o imagen no proporcionada'}), 400
-        
-        # Generar un nombre seguro para la imagen (pero aún NO la guardamos)
-        filename = secure_filename(imagen_referencia.filename)
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        # Si hay imagen, generamos un nombre único con timestamp
+        if imagen_referencia:
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"{timestamp}_{secure_filename(imagen_referencia.filename)}"
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
-        # Intentar insertar en la BD primero
-        cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO noticias (titulo, bajada, cuerpo, img) VALUES (%s, %s, %s, %s)"
-        insert_tuple = (titulo, bajada, cuerpo, filename)
-        
         try:
+            # Insertar datos en la BD
+            cur = mysql.connection.cursor()
+            sql_insert_query = "INSERT INTO noticias (titulo, bajada, cuerpo, img) VALUES (%s, %s, %s, %s)"
+            insert_tuple = (titulo, bajada, cuerpo, filename)
+
             cur.execute(sql_insert_query, insert_tuple)
             mysql.connection.commit()
         except Exception as db_error:
-            mysql.connection.rollback()  # Revertir cambios si la BD falla
+            mysql.connection.rollback()
             print(f"Error en la BD: {db_error}")
             return jsonify({'error': 'Error al guardar en la base de datos'}), 500
         finally:
             cur.close()
 
-        # Si la BD guardó correctamente, ahora sí guardamos la imagen en la carpeta
-        imagen_referencia.save(filepath)
+        # Guardar la imagen solo si se subió y la BD guardó correctamente
+        if imagen_referencia:
+            imagen_referencia.save(filepath)
 
         return jsonify({'message': 'Se ingresó correctamente', 'image_name': filename}), 201
 
     except Exception as e:
-        print(f"Error en : {e}")
+        print(f"Error en la API: {e}")
         return jsonify({'error': str(e)}), 500
-
 
     
 @app.route('/noticias', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def api_noticias():
     try:
         cursor = mysql.connection.cursor()
@@ -875,7 +886,8 @@ def api_get_invitados():
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
-    
+
+
 @app.route('/invitadosMrz', methods=['GET'])#arreglar
 @jwt_required()
 def api_get_invitadosMrz():
@@ -889,14 +901,13 @@ def api_get_invitadosMrz():
             OrderedDict([
                 ('nombre', invitado[1]),        
                 ('tipo_doc', invitado[2]),  
-                ('numero_doc', invitado[3]), 
-                ('pais', invitado[4]),  
-                ('sexo', invitado[5]),  
-                ('nombre_guardia', invitado[6]),  
-                ('casa', invitado[8]),  
-                ('patente', invitado[9]),  
-                ('comentarios', invitado[10]),  
-                ('fecha_creacion', invitado[11]),  
+                ('pais', invitado[3]),  
+                ('sexo', invitado[4]),  
+                ('nombre_guardia', invitado[5]),  
+                ('casa', invitado[7]),  
+                ('patente', invitado[8]),  
+                ('comentarios', invitado[9]),  
+                ('fecha_creacion', invitado[10]),  
 
             ])
             for invitado in invitados
@@ -905,10 +916,13 @@ def api_get_invitadosMrz():
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
+    
+
 def serialize_timedelta(obj):
     if isinstance(obj, datetime.timedelta):
         return str(obj)
     raise TypeError(f"Type {type(obj)} not serializable")
+
 
 def formatoFecha(obj):
     return obj.strftime("%Y/%m/%d")
@@ -1083,6 +1097,32 @@ def api_get_casillas():
             for reporte in reportes
         ]
         return jsonify(reporte_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/casillasPorDepto', methods=['GET'])
+@jwt_required()
+def api_get_casillas_por_depto():
+    try:
+        data = request.json()
+        depto = data.get('depto')
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM casilla where depto= %s and `fecha_creacion` >= NOW() - INTERVAL 3 DAY ORDER BY id_cas DESC',(depto,))
+        casillas = cursor.fetchall()
+        cursor.close()
+
+        casilla_json = [
+            OrderedDict([
+                ('id_cas', casilla[0]),        
+                ('depto', casilla[1]),        
+                ('descripcion', casilla[2]),
+                ('image', casilla[3])    
+
+            ])
+            for casilla in casillas
+        ]
+        return jsonify(casilla_json), 200
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
