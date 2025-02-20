@@ -125,7 +125,7 @@ def index():
             'apellido': usuario[2],
             'email': usuario[3],
             'telefono': usuario[6],
-             'torre': usuario[8],
+            'torre': usuario[8],
             'tipo_usuario': usuario[9]
         }
 
@@ -448,10 +448,10 @@ def resize_image(image, max_size=(800, 800)):
 @jwt_required()
 def generarNov():
     try:
-        titulo = request.form.get('titulo')
+        #titulo = request.form.get('titulo')
         texto = request.form.get('texto')
 
-        if not titulo or not texto:
+        if not texto:
             return jsonify({'error': 'El título y el texto son obligatorios'}), 400
 
         imagen_referencia1 = request.files.get('image1')
@@ -471,10 +471,10 @@ def generarNov():
         try:
             cur = mysql.connection.cursor()
             sql_insert_query = """
-                INSERT INTO libroNovedades (titulo, texto, img1, img2, img3, video) 
+                INSERT INTO libroNovedades (texto, img1, img2, img3, video) 
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
-            insert_tuple = (titulo, texto, filename1, filename2, filename3, video_filename)
+            insert_tuple = (texto, filename1, filename2, filename3, video_filename)
             cur.execute(sql_insert_query, insert_tuple)
             mysql.connection.commit()
         except Exception as db_error:
