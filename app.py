@@ -125,8 +125,8 @@ def index():
             'apellido': usuario[2],
             'email': usuario[3],
             'telefono': usuario[6],
-            'torre': int(usuario[7]),  # Asegurar que sea int
-            'tipo_usuario': usuario[8]
+             'torre': usuario[8],
+            'tipo_usuario': usuario[9]
         }
 
         return jsonify({'status': 'success', 'access_token': access_token, 'user_data': usuario_json}), 200
