@@ -472,7 +472,7 @@ def generarNov():
             cur = mysql.connection.cursor()
             sql_insert_query = """
                 INSERT INTO libroNovedades (texto, img1, img2, img3, video) 
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES ( %s, %s, %s, %s, %s)
             """
             insert_tuple = (texto, filename1, filename2, filename3, video_filename)
             cur.execute(sql_insert_query, insert_tuple)
