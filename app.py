@@ -75,18 +75,18 @@ def get_deptos():
         return jsonify({'error': str(e)}), 500
     
 @app.route("/deptosPorUser", methods=['POST'])
-@jwt_required()
+#@jwt_required()
 def get_deptosUser():
     try:
-        data= request.json
-        userID= data.get('idUser')
-        
+        #data= request.json
+        #userID= data.get('idUser')
+        userID= "5"
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM departamentos where id_arrendatario=%s', (userID))
+        cursor.execute('SELECT users.id_users, torres.nombre,torres.id_torre, departamentos.numeroDepto, departamentos.id_deptos FROM `users` JOIN torres on users.torre=torres.id_torre JOIN departamentos on users.id_users=departamentos.id_arrendatario where users.id_users=%s', (userID))
         usuarios = cursor.fetchall()
         cursor.close()
 
-        usuarios_json = [{'numeroDepto': usuario[1]} for usuario in usuarios]
+        usuarios_json = [{'id_users':usuario[0],'nombre':usuario[1],'id_torre':usuario[2], 'numeroDepto': usuario[3],'id_deptos':usuario[4] } for usuario in usuarios]
         return jsonify(usuarios_json), 200
     except Exception as e:
         print(e)
@@ -551,6 +551,8 @@ def generarNuevoProductoMarket():
         nombre = data.get('nombreProducto')
         precio = data.get('precio')
         imagen_referencia = data.get('image')
+        depto= data.get('depto')
+        id_edifico= data.get('id_edificio')
         image_base64= None
 
         if imagen_referencia:
@@ -562,8 +564,8 @@ def generarNuevoProductoMarket():
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO marketplace (nombreProducto, precio, image) VALUES (%s, %s, %s)"
-        insert_tuple = (nombre,  precio, image_base64)
+        sql_insert_query = "INSERT INTO marketplace (nombreProducto, precio, depto, id_edificio,image) VALUES (%s, %s, %s,  %s,  %s)"
+        insert_tuple = (nombre,  precio,depto,id_edifico, image_base64)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
@@ -573,29 +575,82 @@ def generarNuevoProductoMarket():
     except Exception as e:
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
+@app.route("/marketplacePorDepto", methods=['POST'])
+def get_market_deptos():
+    data = request.get_json()
 
-@app.route("/marketplace", methods=['GET'])
-@jwt_required()
-def get_market():
+    # Acceder correctamente al valor de id_edificio
+    depto = data.get("depto")  # Usar .get() para evitar errores si no existe
+
+    if depto is None:
+        return jsonify({"error": "depto es requerido"}), 400
+
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM marketplace')
+        cursor.execute('SELECT * FROM marketplace WHERE depto = %s', (depto,))
         marketplaces = cursor.fetchall()
         cursor.close()
 
-        usuarios_json = [{'id_mark': marketplace[0], 'nombreProducto':marketplace[1], 'precio':marketplace[2], 'image':marketplace[3], 'fecha_posteo':marketplace[4]} for marketplace in marketplaces]
-        return jsonify(usuarios_json), 200
+        marketplace_json = [{
+            'id_mark': marketplace[0],
+            'nombreProducto': marketplace[1],
+            'precio': marketplace[2],
+            'descripcion': marketplace[3],
+            'depto': marketplace[4], 
+            'id_edificio': marketplace[5],
+            'image': marketplace[6],
+            'fecha_posteo': marketplace[7]
+            
+        } for marketplace in marketplaces]
+        #print(marketplace_json)
+        return jsonify(marketplace_json), 200
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
     
+@app.route("/marketplace", methods=['POST'])
+def get_market():
+    data = request.get_json()
 
-@app.route('/listarBeneficios', methods=['GET'])
-@jwt_required()
-def api_beneficios():
+    # Acceder correctamente al valor de id_edificio
+    id_edificio = data.get("id_edificio")  # Usar .get() para evitar errores si no existe
+
+    if id_edificio is None:
+        return jsonify({"error": "id_edificio es requerido"}), 400
+
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM beneficios ORDER BY id_ben DESC')
+        cursor.execute('SELECT * FROM marketplace WHERE id_edificio = %s', (id_edificio,))
+        marketplaces = cursor.fetchall()
+        cursor.close()
+
+        marketplace_json = [{
+            'id_mark': marketplace[0],
+            'nombreProducto': marketplace[1],
+            'precio': marketplace[2],
+            'descripcion': marketplace[3],
+            'depto': marketplace[4], 
+            'id_edificio': marketplace[5],
+            'image': marketplace[6],
+            'fecha_posteo': marketplace[7]
+            
+        } for marketplace in marketplaces]
+        print(marketplace_json)
+        return jsonify(marketplace_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/listarBeneficios', methods=['POST'])
+@jwt_required()
+def api_beneficios():
+    data = request.get_json()
+    #id_edificio= data.get("id_edificio")
+    id_edificio= 5
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM beneficios where id_edificio=%s ORDER BY id_ben DESC', (id_edificio,))
         invitados = cursor.fetchall()
         cursor.close()
 
@@ -605,7 +660,8 @@ def api_beneficios():
                 ('nombre', invitado[1]),        
                 ('descripcion', invitado[2]),  
                 ('img', invitado[3]),  
-                ('fecha_creacion', invitado[4])
+                ('id_edificio', invitado[4]),  
+                ('fecha_creacion', invitado[5])
             ])
             for invitado in invitados
         ]
@@ -624,12 +680,13 @@ def generarRep():
         ubicacion = data.get('ubicacion')
         descripcion = data.get('descripcion')
         imagen_referencia = data.get('image')
-
+        depto= data.get('depto')
+        id_edificio= data.get('id_edificio')
 
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion, image) VALUES (%s, %s, %s, %s)"
+        sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion,depto,id_edificio, image) VALUES (%s, %s,%s,%s, %s, %s)"
         insert_tuple = (nombre, ubicacion, descripcion, imagen_referencia)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
@@ -887,6 +944,47 @@ def api_get_invitados():
         print(e)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/invitadosPorDepto', methods=['POST'])
+@jwt_required()
+def api_get_invitados_depto():
+    try:
+        #Obtener datos de la solicitud correctamente
+        data = request.get_json()
+        if not data or 'numeroDepto' not in data:
+            return jsonify({'error': 'El campo numeroDepto es obligatorio'}), 400
+
+        numeroDepto = data['numeroDepto']
+
+        # Conectar a la base de datos
+        connection = mysql.connection
+        cursor = connection.cursor()
+
+        # Ejecutar consulta
+        cursor.execute('SELECT id_inv, nombre, apellido, rut, depto, fecha_creacion, fecha_expiracion FROM invitados WHERE depto=%s ORDER BY id_inv DESC', (numeroDepto,))
+        invitados = cursor.fetchall()
+        cursor.close()
+
+        # Convertir resultados a JSON
+        invitado_json = [
+            OrderedDict([
+                ('id_inv', invitado[0]),        
+                ('nombre', invitado[1]),    
+                ('apellido', invitado[2]),        
+                ('rut', invitado[3]),  
+                ('depto', invitado[4]),  
+                ('fecha_creacion', invitado[5]),
+                ('fecha_expiracion', invitado[6])  
+            ])
+            for invitado in invitados
+        ]
+
+        return jsonify(invitado_json), 200
+
+    except Exception as e:
+        print(f"Error en la API: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/invitadosMrz', methods=['GET'])#arreglar
 @jwt_required()
@@ -979,13 +1077,16 @@ def crearAmen():
 @jwt_required()
 def generarAmen():
     data = request.json
-    nombre = data.get('nombre')
+    id_depto = data.get('id_depto')
+    id_user = data.get('id_user')
+    #id_amenitie = data.get('id_amenitie')
+    id_amenitie= 2
     fecha = data.get('fecha')
     hora_entrada = data.get('hora_entrada')
     estado= "pendiente"
     cur = mysql.connection.cursor()
     try:
-        cur.execute('INSERT INTO `amenities`(`nombre`, `fecha`, `hora_entrada`, `estado`) VALUES (%s, %s, %s,%s)', (nombre, fecha, hora_entrada, estado))
+        cur.execute('INSERT INTO `reservaAmenities`(`id_depto`,`id_user`,`id_amenitie`, `fecha`, `hora_entrada`, `estado`) VALUES (%s,%s,%s, %s, %s,%s)', (id_depto,id_user,id_amenitie, fecha, hora_entrada, estado))
         mysql.connection.commit()
         return jsonify({'message': 'Se ingresó correctamente'}), 201
     except Exception as e:
@@ -999,21 +1100,20 @@ def generarAmen():
 def api_get_amenities():
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM amenities ORDER BY id_ame DESC')
+        cursor.execute('SELECT * FROM reservaAmenities ORDER BY id_ame DESC')
         amenities = cursor.fetchall()
         cursor.close()
 
         amenities_json = [
             OrderedDict([
                 ('id_ame', amenitie[0]),        
-                ('nombre', amenitie[1]),        
-                ('descripcion', amenitie[2]),  
-                ('fecha', formatoFecha(amenitie[3])),  
-                ('hora_entrada', str(amenitie[4]) if isinstance(amenitie[4], datetime.timedelta) else amenitie[4]),
-                ('hora_salida', str(amenitie[5]) if isinstance(amenitie[5], datetime.timedelta) else amenitie[5]),
-                ('fecha_creacion', amenitie[6])
-
-                
+                ('id_depto', amenitie[1]),    
+                ('id_user', amenitie[2]),        
+                ('id_amenitie', amenitie[3]),  
+                ('fecha', formatoFecha(amenitie[4])),  
+                ('hora_entrada', amenitie[4]),
+                ('estado', amenitie[6]),  # ← Aquí faltaba la coma
+                ('fecha_creacion', amenitie[7])  # ← Ahora está correcto
             ])
             for amenitie in amenities
         ]
@@ -1024,7 +1124,7 @@ def api_get_amenities():
 
 
 @app.route('/reportes', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def api_get_reportes():
     try:
         cursor = mysql.connection.cursor()
@@ -1038,8 +1138,43 @@ def api_get_reportes():
                 ('nombre', reporte[1]),        
                 ('ubicacion', reporte[2]),
                 ('descripcion', reporte[3]),
-                ('image', reporte[4]),
-                ('fecha_creacion', reporte[5]),
+                ('depto', reporte[4]),
+                ('id_edificio', reporte[5]),
+                ('image', reporte[6]),
+                ('fecha_creacion', reporte[7]),
+
+
+            ])
+            for reporte in reportes
+        ]
+        return jsonify(reporte_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/reportesPorEdificio', methods=['POST'])
+@jwt_required()
+def api_get_reportes_por_edificio():
+    data = request.get_json()
+    if not data or 'id_edificio' not in data:
+        return jsonify({'error': 'El campo numeroDepto es obligatorio'}), 400
+    id_edificio= data['id_edificio']
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM `reportes` WHERE id_edificio=%s and `fecha_creacion` >= NOW() - INTERVAL 7 DAY ORDER BY id_rep DESC',(id_edificio,))
+        reportes = cursor.fetchall()
+        cursor.close()
+
+        reporte_json = [
+            OrderedDict([
+                ('id_rep', reporte[0]),        
+                ('nombre', reporte[1]),        
+                ('ubicacion', reporte[2]),
+                ('descripcion', reporte[3]),
+                ('depto', reporte[4]),
+                ('id_edificio', reporte[5]),
+                ('image', reporte[6]),
+                ('fecha_creacion', reporte[7]),
 
 
             ])
@@ -1065,8 +1200,10 @@ def api_get_reportes_por_dias():
                 ('nombre', reporte[1]),        
                 ('ubicacion', reporte[2]),
                 ('descripcion', reporte[3]),
-                ('image', reporte[4]),
-                ('fecha_creacion', reporte[5]),
+                ('depto', reporte[4]),
+                ('id_edificio', reporte[5]),
+                ('image', reporte[6]),
+                ('fecha_creacion', reporte[7]),
 
 
             ])
@@ -1100,6 +1237,37 @@ def api_get_casillas():
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/casillasUserDeptos', methods=['POST'])
+@jwt_required()
+def api_get_casillas_deptos():
+    try:
+    #Obtener datos de la solicitud correctamente
+        data = request.get_json()
+        if not data or 'numeroDepto' not in data:
+            return jsonify({'error': 'El campo numeroDepto es obligatorio'}), 400
+
+        numeroDepto = data['numeroDepto']      
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM casilla where depto=%s and `fecha_creacion` >= NOW() - INTERVAL 3 DAY ORDER BY id_cas DESC', (numeroDepto,))
+        reportes = cursor.fetchall()
+        cursor.close()
+
+        reporte_json = [
+            OrderedDict([
+                ('id_cas', reporte[0]),        
+                ('depto', reporte[1]),        
+                ('descripcion', reporte[2]),
+                ('image', reporte[3])    
+
+            ])
+            for reporte in reportes
+        ]
+        return jsonify(reporte_json), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/casillasPorDepto', methods=['GET'])
 @jwt_required()
