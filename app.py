@@ -709,7 +709,7 @@ def generarCass():
         # Obtener los datos del formulario
         depto = data.get('depto')
         descripcion = data.get('descripcion')
-        imagen_referencia = data.get('image')
+        imagen_referencia = request.files.get('image')
 
         
 
