@@ -795,8 +795,10 @@ def api_libro_novedades():
             OrderedDict([
                 ('id_lib', invitado[0]),        
                 ('texto', invitado[1]),        
-                ('img', invitado[2]),  
-                ('fecha_creacion', invitado[3])
+                ('img1', invitado[2]),  
+                ('img2', invitado[3]),  
+                ('img3', invitado[4]),  
+                ('fecha_creacion', invitado[5])
             ])
             for invitado in invitados
         ]
