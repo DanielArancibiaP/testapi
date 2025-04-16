@@ -704,19 +704,19 @@ def generarRep():
 #@jwt_required()
 def generarCass():
     try:
-        data = request.json
 
         # Obtener los datos del formulario
-        depto = data.get('depto')
-        descripcion = data.get('descripcion')
+        idUser= request.form.get('idUser')
+        depto = request.form.get('depto')
+        descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
 
         
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO casilla (depto, descripcion ,image) VALUES ( %s, %s, %s)"
-        insert_tuple = (depto,descripcion, imagen_referencia)
+        sql_insert_query = "INSERT INTO casilla (idUser,depto, descripcion ,image) VALUES (%s, %s, %s, %s)"
+        insert_tuple = (idUser,depto,descripcion, imagen_referencia)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
