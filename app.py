@@ -407,7 +407,7 @@ def generarInv2():
 from PIL import Image, ExifTags
 from io import BytesIO
 
-def resize_image(image, max_size=(800, 800)):
+def resize_image(image, max_size=(800, 800), quality=95):
     # Abrir la imagen
     img = Image.open(image)
     
@@ -435,11 +435,11 @@ def resize_image(image, max_size=(800, 800)):
         pass
 
     # Redimensionar la imagen manteniendo la relación de aspecto
-    img.thumbnail(max_size)
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)  # Usar resampling de alta calidad
 
-    # Guardar la imagen redimensionada en un buffer
+    # Guardar la imagen redimensionada en un buffer con calidad alta
     buffer = BytesIO()
-    img.save(buffer, format='JPEG')
+    img.save(buffer, format='JPEG', quality=quality)  # Ajusta la calidad para JPEG
     buffer.seek(0)
     
     return buffer
@@ -1299,7 +1299,7 @@ def api_get_casillas_por_depto():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/casillasPorDias', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def api_get_casillas_por_dias():
     try:
         cursor = mysql.connection.cursor()
@@ -1309,10 +1309,11 @@ def api_get_casillas_por_dias():
 
         reporte_json = [
             OrderedDict([
-                ('id_cas', reporte[0]),        
-                ('depto', reporte[1]),        
-                ('descripcion', reporte[2]),
-                ('image', reporte[3])    
+                ('id_cas', reporte[0]), 
+                ('idUser', reporte[1]),        
+                ('depto', reporte[2]),        
+                ('descripcion', reporte[3]),
+                ('image', reporte[4])    
 
             ])
             for reporte in reportes
