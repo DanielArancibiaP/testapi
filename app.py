@@ -407,7 +407,7 @@ def generarInv2():
 from PIL import Image, ExifTags
 from io import BytesIO
 
-def resize_image(image, max_size=(800, 800), quality=95):
+def resize_image(image, max_size=(800, 800)):
     # Abrir la imagen
     img = Image.open(image)
     
@@ -435,15 +435,12 @@ def resize_image(image, max_size=(800, 800), quality=95):
         pass
 
     # Redimensionar la imagen manteniendo la relación de aspecto
-    img.thumbnail(max_size, Image.Resampling.LANCZOS)  # Usar resampling de alta calidad
+    img.thumbnail(max_size)
 
-    # Guardar la imagen redimensionada en un buffer con calidad alta
+    # Guardar la imagen redimensionada en un buffer
     buffer = BytesIO()
-    img.save(buffer, format='JPEG', quality=quality)  # Ajusta la calidad para JPEG
+    img.save(buffer, format='JPEG')
     buffer.seek(0)
-    
-    return buffer
-
 @app.route('/generarLibroNovedades', methods=['POST'])
 @jwt_required()
 def generarNov():
