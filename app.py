@@ -30,7 +30,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del arc
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', 'jpeg']
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "imagenes")  # Carpeta en la raíz del proyecto
+UPLOAD_CASILLAS = os.path.join(os.getcwd(), "casillas")  # Carpeta en la raíz del proyecto
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["UPLOAD_CASILLAS"] = UPLOAD_CASILLAS
+
 jwt = JWTManager(app)
 
 # Configuración del servidor de correo
@@ -709,7 +713,14 @@ def generarCass():
         imagen_referencia = request.files.get('image')
         resized_image = resize_image(imagen_referencia)
         image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-        
+
+
+        # Generar timestamp único
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+        # Renombrar archivos de forma única
+        filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
+  
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
@@ -719,7 +730,8 @@ def generarCass():
         mysql.connection.commit()
         cur.close()
         print(request.content_type)  # Debe ser 'multipart/form-data'
-
+        if imagen_referencia:
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
