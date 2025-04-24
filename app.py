@@ -30,13 +30,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del arc
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', 'jpeg']
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "imagenes")  # Carpeta en la raíz del proyecto
-UPLOAD_CASILLAS = os.path.join(os.getcwd(), "casillas")  # Carpeta en la raíz del proyecto
+UPLOAD_CASILLAS = os.path.join(os.getcwd(), "imagenes/casillas")  # Carpeta en la raíz del proyecto
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_CASILLAS"] = UPLOAD_CASILLAS
-if not os.path.exists(UPLOAD_CASILLAS):
-    os.makedirs(UPLOAD_CASILLAS)
-jwt = JWTManager(app)
+
 
 # Configuración del servidor de correo
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Cambia según tu proveedor
@@ -728,15 +726,7 @@ def generarCass():
 
         # Guardar los archivos después del commit
         if imagen_referencia:
-             filepath = os.path.join(app.config["UPLOAD_CASILLAS"], filename1)
-             print(f"Intentando guardar imagen en: {filepath}")
-             try:
-                 imagen_referencia.save(filepath)
-                 print("Imagen guardada correctamente.")
-             except Exception as save_error:
-                 print(f"Error al guardar la imagen: {save_error}")
-                     
-                 return jsonify({'message': 'Se ingresó correctamente'}), 201
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
