@@ -35,6 +35,7 @@ UPLOAD_CASILLAS = os.path.join(os.getcwd(), "imagenes/casillas")  # Carpeta en l
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_CASILLAS"] = UPLOAD_CASILLAS
 
+jwt = JWTManager(app)
 
 # Configuración del servidor de correo
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # Cambia según tu proveedor
@@ -699,34 +700,37 @@ def generarRep():
         return jsonify({'error': str(e)}), 500
 
 
+
 @app.route('/generarCasilla', methods=['POST'])
+#@jwt_required()
 def generarCass():
     try:
-        idUser = request.form.get('idUser')
+
+        # Obtener los datos del formulario
+        idUser= request.form.get('idUser')
         depto = request.form.get('depto')
         descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
 
-        if not idUser or not depto:
-            return jsonify({'error': 'Faltan campos obligatorios'}), 400
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
-        
-        try:
-            cur = mysql.connection.cursor()
-            sql_insert_query = "INSERT INTO casilla (idUser, depto, descripcion, image) VALUES (%s, %s, %s, %s)"
-            cur.execute(sql_insert_query, (idUser, depto, descripcion, filename1))
-            mysql.connection.commit()
-        except Exception as db_error:
-            mysql.connection.rollback()
-            print(f"Error en la BD: {db_error}")
-            return jsonify({'error': 'Error al guardar en la base de datos'}), 500
-        finally:
-            cur.close()
 
-        # Guardar los archivos después del commit
+        # Generar timestamp único
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+        # Renombrar archivos de forma única
+        filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
+  
+
+        # Insertar los datos en la base de datos MySQL
+        cur = mysql.connection.cursor()
+        sql_insert_query = "INSERT INTO casilla (idUser,depto, descripcion ,image) VALUES (%s, %s, %s, %s)"
+        insert_tuple = (idUser,depto,descripcion, image_base64)
+        cur.execute(sql_insert_query, insert_tuple)
+        mysql.connection.commit()
+        cur.close()
+        print(request.content_type)  # Debe ser 'multipart/form-data'
         if imagen_referencia:
-            imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
+        return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
