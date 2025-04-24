@@ -710,21 +710,25 @@ def generarCass():
 
         if not idUser or not depto:
             return jsonify({'error': 'Faltan campos obligatorios'}), 400
-
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
+        
+        try:
+            cur = mysql.connection.cursor()
+            sql_insert_query = "INSERT INTO casilla (idUser, depto, descripcion, image) VALUES (%s, %s, %s, %s)"
+            cur.execute(sql_insert_query, (idUser, depto, descripcion, filename1))
+            mysql.connection.commit()
+        except Exception as db_error:
+            mysql.connection.rollback()
+            print(f"Error en la BD: {db_error}")
+            return jsonify({'error': 'Error al guardar en la base de datos'}), 500
+        finally:
+            cur.close()
 
-        # Guardar en la base de datos solo el nombre del archivo
-        cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO casilla (idUser, depto, descripcion, image) VALUES (%s, %s, %s, %s)"
-        cur.execute(sql_insert_query, (idUser, depto, descripcion, filename1))
-        mysql.connection.commit()
-        cur.close()
-
-        # Guardar la imagen físicamente en el servidor
+        # Guardar los archivos después del commit
         if imagen_referencia:
             imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
-
+            
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
