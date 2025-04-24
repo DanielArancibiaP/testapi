@@ -29,8 +29,9 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False  # Token sin expiración
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del archivo a 16 MB
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', 'jpeg']
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "imagenes")  # Carpeta en la raíz del proyecto
-UPLOAD_CASILLAS = os.path.join(os.getcwd(), "imagenes/casillas")  # Carpeta en la raíz del proyecto
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "imagenes")
+UPLOAD_CASILLAS = os.path.join(UPLOAD_FOLDER, "casillas")
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_CASILLAS"] = UPLOAD_CASILLAS
