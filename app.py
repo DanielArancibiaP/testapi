@@ -700,38 +700,31 @@ def generarRep():
         return jsonify({'error': str(e)}), 500
 
 
-
 @app.route('/generarCasilla', methods=['POST'])
-#@jwt_required()
 def generarCass():
     try:
-
-        # Obtener los datos del formulario
-        idUser= request.form.get('idUser')
+        idUser = request.form.get('idUser')
         depto = request.form.get('depto')
         descripcion = request.form.get('descripcion')
         imagen_referencia = request.files.get('image')
-        resized_image = resize_image(imagen_referencia)
-        image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
 
+        if not idUser or not depto:
+            return jsonify({'error': 'Faltan campos obligatorios'}), 400
 
-        # Generar timestamp único
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-
-        # Renombrar archivos de forma única
         filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
-  
 
-        # Insertar los datos en la base de datos MySQL
+        # Guardar en la base de datos solo el nombre del archivo
         cur = mysql.connection.cursor()
-        sql_insert_query = "INSERT INTO casilla (idUser,depto, descripcion ,image) VALUES (%s, %s, %s, %s)"
-        insert_tuple = (idUser,depto,descripcion, image_base64)
-        cur.execute(sql_insert_query, insert_tuple)
+        sql_insert_query = "INSERT INTO casilla (idUser, depto, descripcion, image) VALUES (%s, %s, %s, %s)"
+        cur.execute(sql_insert_query, (idUser, depto, descripcion, filename1))
         mysql.connection.commit()
         cur.close()
-        print(request.content_type)  # Debe ser 'multipart/form-data'
+
+        # Guardar la imagen físicamente en el servidor
         if imagen_referencia:
             imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
+
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
