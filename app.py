@@ -34,7 +34,8 @@ UPLOAD_CASILLAS = os.path.join(os.getcwd(), "casillas")  # Carpeta en la raíz d
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_CASILLAS"] = UPLOAD_CASILLAS
-
+if not os.path.exists(UPLOAD_CASILLAS):
+    os.makedirs(UPLOAD_CASILLAS)
 jwt = JWTManager(app)
 
 # Configuración del servidor de correo
