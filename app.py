@@ -727,9 +727,15 @@ def generarCass():
 
         # Guardar los archivos después del commit
         if imagen_referencia:
-            imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
-            
-        return jsonify({'message': 'Se ingresó correctamente'}), 201
+             filepath = os.path.join(app.config["UPLOAD_CASILLAS"], filename1)
+             print(f"Intentando guardar imagen en: {filepath}")
+             try:
+                 imagen_referencia.save(filepath)
+                 print("Imagen guardada correctamente.")
+             except Exception as save_error:
+                 print(f"Error al guardar la imagen: {save_error}")
+                     
+                 return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
