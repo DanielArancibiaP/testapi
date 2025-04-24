@@ -730,7 +730,7 @@ def generarCass():
         cur.close()
         print(request.content_type)  # Debe ser 'multipart/form-data'
         if imagen_referencia:
-            imagen_referencia.save(os.path.join(app.config["UPLOAD_CASILLAS"], filename1))
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
