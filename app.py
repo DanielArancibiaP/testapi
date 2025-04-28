@@ -686,14 +686,21 @@ def generarRep():
         id_edificio= data.get('id_edificio')
 
 
+        # Generar timestamp único
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+        # Renombrar archivos de forma única
+        filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
+
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion,depto,id_edificio, image) VALUES (%s, %s,%s,%s, %s, %s)"
-        insert_tuple = (nombre, ubicacion, descripcion, imagen_referencia)
+        insert_tuple = (nombre, ubicacion, descripcion, filename1)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
-
+        if imagen_referencia:
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
     except Exception as e:
@@ -728,7 +735,6 @@ def generarCass():
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
-        print(request.content_type)  # Debe ser 'multipart/form-data'
         if imagen_referencia:
             imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
         return jsonify({'message': 'Se ingresó correctamente'}), 201
