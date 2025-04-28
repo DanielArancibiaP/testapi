@@ -676,14 +676,13 @@ def api_beneficios():
 def generarRep():
     try:
         # Obtener los datos del formulario
-        data = request.json
 
-        nombre = data.get('nombre')
-        ubicacion = data.get('ubicacion')
-        descripcion = data.get('descripcion')
-        imagen_referencia = data.get('image')
-        depto= data.get('depto')
-        id_edificio= data.get('id_edificio')
+        nombre = request.form.get('nombre')
+        ubicacion = request.form.get('ubicacion')
+        descripcion = request.form.get('descripcion')
+        imagen_referencia = request.form.get('image')
+        depto= request.form.get('depto')
+        id_edificio= request.form.get('id_edificio')
 
 
         # Generar timestamp único
@@ -695,7 +694,7 @@ def generarRep():
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO reportes (nombre, ubicacion, descripcion,depto,id_edificio, image) VALUES (%s, %s,%s,%s, %s, %s)"
-        insert_tuple = (nombre, ubicacion, descripcion, filename1)
+        insert_tuple = (nombre, ubicacion, descripcion,depto, id_edificio, filename1)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
