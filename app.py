@@ -680,7 +680,7 @@ def generarRep():
         nombre = request.form.get('nombre')
         ubicacion = request.form.get('ubicacion')
         descripcion = request.form.get('descripcion')
-        imagen_referencia = request.form.get('image')
+        imagen_referencia = request.files.get('image')
         depto= request.form.get('depto')
         id_edificio= request.form.get('id_edificio')
 
