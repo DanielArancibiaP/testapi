@@ -548,11 +548,11 @@ def generarBen():
 def generarNuevoProductoMarket():
     try:
         # Obtener los datos del formulario
-        data = request.json
 
         nombre = request.form.get('nombreProducto')
         precio = request.form.get('precio')
-        imagen_referencia = request.form.get('image')
+        descripcion= request.form.get('descripcion')
+        imagen_referencia = request.files.get('image')
         depto= request.form.get('depto')
         id_edifico= request.form.get('id_edificio')
 
