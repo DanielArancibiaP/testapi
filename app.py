@@ -550,24 +550,23 @@ def generarNuevoProductoMarket():
         # Obtener los datos del formulario
         data = request.json
 
-        nombre = data.get('nombreProducto')
-        precio = data.get('precio')
-        imagen_referencia = data.get('image')
-        depto= data.get('depto')
-        id_edifico= data.get('id_edificio')
-        image_base64= None
+        nombre = request.form.get('nombreProducto')
+        precio = request.form.get('precio')
+        imagen_referencia = request.form.get('image')
+        depto= request.form.get('depto')
+        id_edifico= request.form.get('id_edificio')
 
-        if imagen_referencia:
-            resized_image = resize_image(imagen_referencia)
-            image_base64 = base64.b64encode(resized_image.read()).decode('utf-8')
-            
-    
+        # Generar timestamp único
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+        # Renombrar archivos de forma única
+        filename1 = f"{timestamp}_{secure_filename(imagen_referencia.filename)}" if imagen_referencia else None
 
 
         # Insertar los datos en la base de datos MySQL
         cur = mysql.connection.cursor()
         sql_insert_query = "INSERT INTO marketplace (nombreProducto, precio, depto, id_edificio,image) VALUES (%s, %s, %s,  %s,  %s)"
-        insert_tuple = (nombre,  precio,depto,id_edifico, image_base64)
+        insert_tuple = (nombre,  precio,depto,id_edifico, filename1)
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
