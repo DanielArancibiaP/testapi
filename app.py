@@ -570,6 +570,8 @@ def generarNuevoProductoMarket():
         cur.execute(sql_insert_query, insert_tuple)
         mysql.connection.commit()
         cur.close()
+        if imagen_referencia:
+            imagen_referencia.save(os.path.join(app.config["UPLOAD_FOLDER"], filename1))
 
         return jsonify({'message': 'Se ingresó correctamente'}), 201
 
