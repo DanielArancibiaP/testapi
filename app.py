@@ -20,10 +20,10 @@ from flask_jwt_extended import (
 app = Flask(__name__)
 CORS(app)  # Aplica CORS a toda la aplicación
 
-app.config['MYSQL_HOST'] = '167.71.118.217' 
-app.config['MYSQL_USER'] = 'admin_flutt'
-app.config['MYSQL_PASSWORD'] = 'lOtTetiz8P'
-app.config['MYSQL_DB'] = 'admin_flutt'
+app.config['MYSQL_HOST'] = 'db-porteria-residencial.mysql.database.azure.com' 
+app.config['MYSQL_USER'] = 'residentporeria'
+app.config['MYSQL_PASSWORD'] = 'j9ww(86mJA]G'
+app.config['MYSQL_DB'] = 'porteria_residencial'
 app.config["JWT_SECRET_KEY"] = "1234"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False  # Token sin expiración
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limita el tamaño del archivo a 16 MB
@@ -798,7 +798,7 @@ def generarUsr():
 #        return jsonify({'error': str(e)}), 500
 
 @app.route('/libroNovedades', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 def api_libro_novedades():
     try:
         cursor = mysql.connection.cursor()
@@ -1243,9 +1243,10 @@ def api_get_casillas():
         reporte_json = [
             OrderedDict([
                 ('id_cas', reporte[0]),        
-                ('depto', reporte[1]),        
-                ('descripcion', reporte[2]),
-                ('image', reporte[3])    
+                ('depto', reporte[2]),        
+                ('descripcion', reporte[3]),
+                ('image', reporte[4]) ,
+                ('fecha_creacion', reporte[5]) ,
 
             ])
             for reporte in reportes
@@ -1300,9 +1301,11 @@ def api_get_casillas_por_depto():
         casilla_json = [
             OrderedDict([
                 ('id_cas', casilla[0]),        
-                ('depto', casilla[1]),        
-                ('descripcion', casilla[2]),
-                ('image', casilla[3])    
+                ('idUser', casilla[1]),        
+                ('depto', casilla[2]),        
+                ('descripcion', casilla[3]),
+                ('image', casilla[4])    ,
+                ('fecha_creacion', casilla[5]) ,
 
             ])
             for casilla in casillas
@@ -1327,7 +1330,9 @@ def api_get_casillas_por_dias():
                 ('idUser', reporte[1]),        
                 ('depto', reporte[2]),        
                 ('descripcion', reporte[3]),
-                ('image', reporte[4])    
+                ('image', reporte[4]),
+                ('fecha_creacion', reporte[5]) ,
+    
 
             ])
             for reporte in reportes
